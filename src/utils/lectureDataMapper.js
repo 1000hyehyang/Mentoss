@@ -1,44 +1,53 @@
 // src/utils/lectureDataMapper.js
 
 /**
- * 강의 폼 데이터를 API 요청 형식으로 변환
+ * 강의 등록 폼 데이터를 서버 API 포맷으로 변환
  */
-export const mapFormDataToApiRequest = (formData) => {
-  // TipTap 에디터의 HTML 내용을 일반 텍스트로 변환
-  const getTextFromHTML = (html) => {
-    const div = document.createElement("div");
-    div.innerHTML = html;
-    return div.textContent || div.innerText || "";
-  };
-
+export const mapLectureFormToApi = (formData) => {
   return {
     lectureTitle: formData.title,
-    description: getTextFromHTML(formData.description), // TipTap 에디터 내용
-    categoryId: parseInt(formData.categoryId), // 카테고리 ID는 숫자로 변환
-    curriculum: getTextFromHTML(formData.curriculum), // TipTap 에디터 내용
-    price: parseInt(formData.price),
+    description: formData.description,
+    categoryId: Number(formData.category),
+    curriculum: formData.curriculum,
+    price: Number(formData.price),
     regions: formData.regions.map((region) => ({
       regionCode: region.regionCode,
     })),
-    timeSlots: formData.timeSlots.map((slot) => ({
-      dayOfWeek: slot.dayOfWeek,
-      startTime: slot.startTime,
-      endTime: slot.endTime,
-    })),
+    timeSlots: formData.timeSlots.map((slot) => {
+      const formattedSlot = {
+        dayOfWeek: slot.dayOfWeek,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+      };
+      // id가 있다면 제거
+      delete formattedSlot.id;
+      return formattedSlot;
+    }),
   };
 };
 
 /**
- * 지역 문자열을 지역 코드로 변환하는 매핑
- * 실제로는 지역 API를 통해 가져와야 할 데이터이지만,
- * 현재는 하드코딩된 예시입니다.
+ * API 응답 데이터를 폼 데이터 포맷으로 변환
  */
-export const REGION_CODE_MAP = {
-  // export 추가!
-  // 서울 강남구
-  "강남구 전체": "1111010400",
-  "강남구 개포동": "1111010401",
-  "강남구 논현동": "1111010402",
-  "강남구 대치동": "1111010403",
-  // 다른 지역들도 추가...
+export const mapApiToLectureForm = (apiData) => {
+  return {
+    title: apiData.lectureTitle,
+    description: apiData.description,
+    category: apiData.categoryId?.toString() || "",
+    curriculum: apiData.curriculum,
+    price: apiData.price?.toString() || "",
+    regions:
+      apiData.regions?.map((region) => ({
+        regionCode: region.regionCode,
+        name: region.displayName || region.name || region.regionCode,
+        displayName: region.displayName || region.name || region.regionCode,
+      })) || [],
+    timeSlots:
+      apiData.timeSlots?.map((slot, index) => ({
+        id: Date.now() + index, // 고유 ID 부여
+        dayOfWeek: slot.dayOfWeek,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+      })) || [],
+  };
 };

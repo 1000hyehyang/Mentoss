@@ -1,6 +1,6 @@
 // src/components/CreateLecture/RegionSelectionModal.jsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -10,27 +10,12 @@ import {
   Button,
   Chip,
   IconButton,
+  CircularProgress,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
-
-const SEOUL_DISTRICTS = [
-  { id: "jongno", name: "종로구" },
-  { id: "gangnam", name: "강남구" },
-];
-
-const DISTRICT_DONGS = {
-  jongno: [
-    { name: "종로구 효자동", code: "1111010400" },
-    { name: "종로구 창성동", code: "1111010500" },
-    { name: "종로구 통의동", code: "1111010600" },
-  ],
-  gangnam: [
-    { name: "강남구 일원동", code: "1135010100" },
-    { name: "강남구 수서동", code: "1135010200" },
-  ],
-};
+import { regionApi } from "../../lib/api/RegionApi";
 
 export default function RegionSelectionModal({
   open,
@@ -38,31 +23,88 @@ export default function RegionSelectionModal({
   onSubmit,
   selectedRegions = [],
 }) {
-  const [selectedProvince, setSelectedProvince] = useState("seoul");
-  const [selectedDistrict, setSelectedDistrict] = useState("gangnam");
+  const [selectedProvince, setSelectedProvince] = useState(null);
+  const [selectedDistrict, setSelectedDistrict] = useState(null);
   const [selectedDongs, setSelectedDongs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // API로부터 가져온 데이터
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [dongs, setDongs] = useState([]);
+
+  // 시도 목록 로드
+  useEffect(() => {
+    const loadProvinces = async () => {
+      try {
+        setLoading(true);
+        const response = await regionApi.getSidos();
+        setProvinces(response);
+      } catch (error) {
+        console.error("시도 목록 로드 실패:", error);
+        setError("시도 목록을 불러오는데 실패했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (open) {
+      loadProvinces();
+    }
+  }, [open]);
 
   // 시/도 선택 핸들러
-  const handleProvinceClick = (provinceId) => {
-    setSelectedProvince(provinceId);
-    setSelectedDistrict("");
+  const handleProvinceClick = async (province) => {
+    setSelectedProvince(province);
+    setSelectedDistrict(null);
     setSelectedDongs([]);
+    setDongs([]);
+
+    try {
+      setLoading(true);
+      const response = await regionApi.getSigungus(province);
+      setDistricts(response);
+    } catch (error) {
+      console.error("시군구 목록 로드 실패:", error);
+      setError("시군구 목록을 불러오는데 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 구/군 선택 핸들러
-  const handleDistrictClick = (districtId) => {
-    setSelectedDistrict(districtId);
+  const handleDistrictClick = async (district) => {
+    setSelectedDistrict(district);
     setSelectedDongs([]);
+
+    try {
+      setLoading(true);
+      const response = await regionApi.getDongs(selectedProvince, district);
+      setDongs(response);
+    } catch (error) {
+      console.error("읍면동 목록 로드 실패:", error);
+      setError("읍면동 목록을 불러오는데 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 동 선택 토글 핸들러
   const toggleDong = (dong) => {
     setSelectedDongs((prev) => {
-      const isExist = prev.some((d) => d.code === dong.code);
+      const isExist = prev.some((d) => d.regionCode === dong.regionCode);
       if (isExist) {
-        return prev.filter((d) => d.code !== dong.code);
+        return prev.filter((d) => d.regionCode !== dong.regionCode);
       } else {
-        return [...prev, dong];
+        // displayName을 생성하기 위해 dong 객체에 추가
+        const dongWithDisplay = {
+          ...dong,
+          displayName: `${dong.sido} ${dong.sigungu} ${dong.dong || ""}`.trim(),
+          name: dong.dong || dong.sigungu, // 이전 코드와의 호환성을 위해
+          code: dong.regionCode, // 이전 코드와의 호환성을 위해
+        };
+        return [...prev, dongWithDisplay];
       }
     });
   };
@@ -102,109 +144,137 @@ export default function RegionSelectionModal({
       </DialogTitle>
 
       <DialogContent>
+        {/* 에러 메시지 */}
+        {error && (
+          <Typography color="error" sx={{ mb: 2 }}>
+            {error}
+          </Typography>
+        )}
+
+        {/* 로딩 상태 */}
+        {loading && (
+          <Box display="flex" justifyContent="center" my={2}>
+            <CircularProgress size={24} />
+          </Box>
+        )}
+
         {/* 시/도 선택 버튼 */}
         <Box display="flex" flexWrap="wrap" gap={1} mb={4}>
-          <Chip
-            label="서울"
-            onClick={() => handleProvinceClick("seoul")}
-            sx={{
-              bgcolor:
-                selectedProvince === "seoul"
-                  ? "var(--action-primary-bg)"
-                  : "white",
-              color:
-                selectedProvince === "seoul"
-                  ? "var(--primary-200)"
-                  : "var(--text-300)",
-              border:
-                selectedProvince === "seoul"
-                  ? "none"
-                  : "1px solid var(--bg-300)",
-              "&:hover": {
+          {provinces.map((province) => (
+            <Chip
+              key={province}
+              label={province}
+              onClick={() => handleProvinceClick(province)}
+              sx={{
                 bgcolor:
-                  selectedProvince === "seoul"
+                  selectedProvince === province
                     ? "var(--action-primary-bg)"
-                    : "var(--bg-200)",
-              },
-            }}
-          />
+                    : "white",
+                color:
+                  selectedProvince === province
+                    ? "var(--primary-200)"
+                    : "var(--text-300)",
+                border:
+                  selectedProvince === province
+                    ? "none"
+                    : "1px solid var(--bg-300)",
+                "&:hover": {
+                  bgcolor:
+                    selectedProvince === province
+                      ? "var(--action-primary-bg)"
+                      : "var(--bg-200)",
+                },
+              }}
+            />
+          ))}
         </Box>
 
         {/* 구/군 선택 테이블 */}
-        <Box
-          display="flex"
-          gap={2}
-          mb={4}
-          sx={{
-            border: "1px solid var(--bg-300)",
-            borderRadius: 1,
-            overflow: "hidden",
-          }}
-        >
-          {/* 구/군 목록 */}
-          <Box sx={{ width: "40%", borderRight: "1px solid var(--bg-300)" }}>
-            {SEOUL_DISTRICTS.map((district) => (
-              <Box
-                key={district.id}
-                onClick={() => handleDistrictClick(district.id)}
-                sx={{
-                  p: 2,
-                  cursor: "pointer",
-                  bgcolor:
-                    selectedDistrict === district.id
-                      ? "var(--bg-200)"
-                      : "transparent",
-                  color:
-                    selectedDistrict === district.id
-                      ? "var(--text-100)"
-                      : "var(--text-300)",
-                  fontWeight: selectedDistrict === district.id ? 600 : 400,
-                  borderBottom: "1px solid var(--bg-300)",
-                  "&:hover": {
-                    bgcolor: "var(--bg-200)",
-                  },
-                }}
-              >
-                {district.name}
-              </Box>
-            ))}
-          </Box>
-
-          {/* 동 목록 */}
-          <Box sx={{ width: "60%" }}>
-            {selectedDistrict &&
-              DISTRICT_DONGS[selectedDistrict]?.map((dong) => (
+        {selectedProvince && (
+          <Box
+            display="flex"
+            gap={2}
+            mb={4}
+            sx={{
+              border: "1px solid var(--bg-300)",
+              borderRadius: 1,
+              overflow: "hidden",
+              minHeight: 200,
+            }}
+          >
+            {/* 구/군 목록 */}
+            <Box sx={{ width: "40%", borderRight: "1px solid var(--bg-300)" }}>
+              {districts.map((district) => (
                 <Box
-                  key={dong.code}
-                  onClick={() => toggleDong(dong)}
+                  key={district}
+                  onClick={() => handleDistrictClick(district)}
                   sx={{
                     p: 2,
                     cursor: "pointer",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    bgcolor:
+                      selectedDistrict === district
+                        ? "var(--bg-200)"
+                        : "transparent",
+                    color:
+                      selectedDistrict === district
+                        ? "var(--text-100)"
+                        : "var(--text-300)",
+                    fontWeight: selectedDistrict === district ? 600 : 400,
                     borderBottom: "1px solid var(--bg-300)",
-                    color: selectedDongs.some((d) => d.code === dong.code)
-                      ? "var(--primary-200)"
-                      : "var(--text-300)",
-                    fontWeight: selectedDongs.some((d) => d.code === dong.code)
-                      ? 600
-                      : 400,
                     "&:hover": {
                       bgcolor: "var(--bg-200)",
                     },
                   }}
                 >
-                  <Typography>{dong.name}</Typography>
-                  {selectedDongs.some((d) => d.code === dong.code) && (
-                    <CheckIcon
-                      sx={{ fontSize: 20, color: "var(--primary-200)" }}
-                    />
-                  )}
+                  {district}
                 </Box>
               ))}
+            </Box>
+
+            {/* 동 목록 */}
+            <Box sx={{ width: "60%" }}>
+              {selectedDistrict &&
+                dongs.map((dong) => (
+                  <Box
+                    key={dong.regionCode}
+                    onClick={() => toggleDong(dong)}
+                    sx={{
+                      p: 2,
+                      cursor: "pointer",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderBottom: "1px solid var(--bg-300)",
+                      color: selectedDongs.some(
+                        (d) => d.regionCode === dong.regionCode
+                      )
+                        ? "var(--primary-200)"
+                        : "var(--text-300)",
+                      fontWeight: selectedDongs.some(
+                        (d) => d.regionCode === dong.regionCode
+                      )
+                        ? 600
+                        : 400,
+                      "&:hover": {
+                        bgcolor: "var(--bg-200)",
+                      },
+                    }}
+                  >
+                    <Typography>
+                      {dong.dong ? `${dong.dong}` : `${dong.sigungu} 전체`}
+                    </Typography>
+                    {selectedDongs.some(
+                      (d) => d.regionCode === dong.regionCode
+                    ) && (
+                      <CheckIcon
+                        sx={{ fontSize: 20, color: "var(--primary-200)" }}
+                      />
+                    )}
+                  </Box>
+                ))}
+            </Box>
           </Box>
-        </Box>
+        )}
 
         {/* 선택 항목 2 */}
         <Typography variant="subtitle2" fontWeight={600} mb={2}>
@@ -216,7 +286,7 @@ export default function RegionSelectionModal({
           {selectedDongs.map((dong, index) => (
             <Chip
               key={index}
-              label={dong.name}
+              label={dong.displayName}
               onDelete={() => toggleDong(dong)}
               sx={{
                 bgcolor: "var(--action-primary-bg)",
@@ -247,11 +317,16 @@ export default function RegionSelectionModal({
             variant="contained"
             fullWidth
             onClick={handleSubmit}
+            disabled={selectedDongs.length === 0}
             sx={{
               background: "linear-gradient(45deg, #5B8DEF, #F57EC2)",
               fontWeight: 600,
               "&:hover": {
                 background: "linear-gradient(45deg, #4A7BD4, #E36BAB)",
+              },
+              "&:disabled": {
+                background: "var(--bg-300)",
+                color: "var(--text-400)",
               },
             }}
           >

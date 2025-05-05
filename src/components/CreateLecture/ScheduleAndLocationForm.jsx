@@ -16,7 +16,6 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import RegionSelectionModal from "./RegionSelectionModal";
 import GradientButton from "../Button/GradientButton";
 import { useLectureStore } from "../../store/useLectureStore";
-import { REGION_CODE_MAP } from "../../utils/lectureDataMapper";
 
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
@@ -64,9 +63,20 @@ export default function ScheduleAndLocationForm({ onSubmit, isLoading }) {
 
   // 지역 추가
   const handleAddRegions = (regions) => {
-    const mappedRegions = regions.map((region) => ({
+    // 중복 체크 로직
+    const currentCodes = new Set(formData.regions.map((r) => r.regionCode));
+    const newRegions = regions.filter(
+      (region) => !currentCodes.has(region.regionCode)
+    );
+
+    // 새로운 지역만 추가
+    const mappedRegions = newRegions.map((region) => ({
       name: region.name,
-      regionCode: region.code, // 이제 올바른 region_code가 전달됨
+      displayName: region.displayName,
+      regionCode: region.regionCode || region.code, // 둘 다 지원
+      dong: region.dong || null,
+      sido: region.sido || null,
+      sigungu: region.sigungu || null,
     }));
 
     setRegions([...formData.regions, ...mappedRegions]);
@@ -255,7 +265,7 @@ export default function ScheduleAndLocationForm({ onSubmit, isLoading }) {
             {formData.regions.map((region, index) => (
               <Chip
                 key={index}
-                label={region.name}
+                label={region.displayName || region.name}
                 onDelete={() => removeRegion(index)}
                 sx={{
                   backgroundColor: "var(--action-primary-bg)",

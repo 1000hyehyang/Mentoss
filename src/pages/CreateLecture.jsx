@@ -9,7 +9,7 @@ import UnauthorizedView from "../components/CreateLecture/UnauthorizedView";
 import { useUserStore } from "../store/useUserStore";
 import { useLectureStore } from "../store/useLectureStore";
 import { createLecture } from "../lib/api/lectureApi";
-import { mapFormDataToApiRequest } from "../utils/lectureDataMapper";
+import { mapLectureFormToApi } from "../utils/lectureDataMapper";
 
 function TabPanel({ children, value, index }) {
   return (
@@ -51,7 +51,7 @@ export default function CreateLecture() {
       setError(null);
 
       // 폼 데이터를 API 형식으로 변환
-      const apiData = mapFormDataToApiRequest(formData);
+      const apiData = mapLectureFormToApi(formData);
       console.log("Sending data:", apiData); // 전송하는 데이터 확인
 
       // API 호출
