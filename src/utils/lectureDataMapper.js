@@ -1,13 +1,21 @@
 // src/utils/lectureDataMapper.js
 
-/**
- * 강의 등록 폼 데이터를 서버 API 포맷으로 변환
- */
 export const mapLectureFormToApi = (formData) => {
-  return {
+  console.log("mapLectureFormToApi 입력:", formData);
+
+  // categoryId를 직접 사용 (이미 설정된 값)
+  const categoryId = formData.categoryId; // Number 변환 불필요, 이미 숫자로 저장됨
+  console.log("categoryId:", categoryId);
+  console.log("categoryId 타입:", typeof categoryId);
+
+  if (!categoryId) {
+    console.error("categoryId가 없습니다!");
+  }
+
+  const apiData = {
     lectureTitle: formData.title,
     description: formData.description,
-    categoryId: Number(formData.category),
+    categoryId: categoryId, // 이미 숫자로 저장된 값 사용
     curriculum: formData.curriculum,
     price: Number(formData.price),
     regions: formData.regions.map((region) => ({
@@ -19,35 +27,12 @@ export const mapLectureFormToApi = (formData) => {
         startTime: slot.startTime,
         endTime: slot.endTime,
       };
-      // id가 있다면 제거
       delete formattedSlot.id;
       return formattedSlot;
     }),
   };
-};
 
-/**
- * API 응답 데이터를 폼 데이터 포맷으로 변환
- */
-export const mapApiToLectureForm = (apiData) => {
-  return {
-    title: apiData.lectureTitle,
-    description: apiData.description,
-    category: apiData.categoryId?.toString() || "",
-    curriculum: apiData.curriculum,
-    price: apiData.price?.toString() || "",
-    regions:
-      apiData.regions?.map((region) => ({
-        regionCode: region.regionCode,
-        name: region.displayName || region.name || region.regionCode,
-        displayName: region.displayName || region.name || region.regionCode,
-      })) || [],
-    timeSlots:
-      apiData.timeSlots?.map((slot, index) => ({
-        id: Date.now() + index, // 고유 ID 부여
-        dayOfWeek: slot.dayOfWeek,
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-      })) || [],
-  };
+  console.log("최종 API 데이터:", apiData);
+
+  return apiData;
 };

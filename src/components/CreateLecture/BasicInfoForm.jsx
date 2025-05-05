@@ -6,29 +6,23 @@ import GradientButton from "../Button/GradientButton";
 import { useLectureStore } from "../../store/useLectureStore";
 import LectureEditor from "./LectureEditor";
 
-// 카테고리 데이터 (실제로는 API에서 가져와야 함)
+// DB에 있는 테스트 데이터에 맞는 카테고리 구조
 const CATEGORIES = {
-  프로그래밍: {
-    id: 1,
+  학문: {
     middle: {
-      프론트엔드: ["React", "Vue", "JavaScript"],
-      백엔드: ["Node.js", "Python", "Java"],
-      "앱 개발": ["React Native", "Flutter", "Swift"],
+      컴퓨터공학: {
+        프로그래밍: 1,
+      },
+      수학: {
+        미적분: 2,
+      },
     },
   },
-  디자인: {
-    id: 2,
+  예술: {
     middle: {
-      "UI/UX": ["Figma", "Sketch", "Adobe XD"],
-      그래픽: ["Photoshop", "Illustrator", "InDesign"],
-    },
-  },
-  어학: {
-    id: 3,
-    middle: {
-      영어: ["회화", "토익", "토플"],
-      중국어: ["HSK", "실용중국어"],
-      일본어: ["JLPT", "회화"],
+      음악: {
+        피아노: 3,
+      },
     },
   },
 };
@@ -41,29 +35,58 @@ export default function BasicInfoForm({ onNext }) {
     if (formData.category) {
       setFormField("middleCategory", "");
       setFormField("subCategory", "");
+      setFormField("categoryId", null);
     }
   }, [formData.category]);
 
   useEffect(() => {
     if (formData.middleCategory) {
       setFormField("subCategory", "");
+      setFormField("categoryId", null);
     }
   }, [formData.middleCategory]);
 
-  // 카테고리에 따른 ID 설정
+  // 카테고리에 따른 ID 설정 수정
   useEffect(() => {
-    if (formData.category) {
-      const categoryId = CATEGORIES[formData.category]?.id;
+    if (formData.category && formData.middleCategory && formData.subCategory) {
+      const categoryId =
+        CATEGORIES[formData.category]?.middle[formData.middleCategory]?.[
+          formData.subCategory
+        ];
+      console.log("현재 선택된 카테고리:", {
+        category: formData.category,
+        middleCategory: formData.middleCategory,
+        subCategory: formData.subCategory,
+      });
+      console.log("설정될 categoryId:", categoryId);
+
+      // categoryId를 설정하고, 기존 category 필드는 그대로 유지
       setFormField("categoryId", categoryId);
+    } else {
+      // 하나라도 선택되지 않았을 때는 categoryId를 null로
+      setFormField("categoryId", null);
     }
   }, [formData.category, formData.middleCategory, formData.subCategory]);
 
   const handleNext = () => {
     // 유효성 검사
-    if (!formData.title || !formData.category || !formData.price) {
-      alert("필수 항목을 입력해주세요.");
+    if (
+      !formData.title ||
+      !formData.category ||
+      !formData.middleCategory ||
+      !formData.subCategory ||
+      !formData.price
+    ) {
+      alert("필수 항목을 모두 입력해주세요.");
       return;
     }
+
+    // categoryId 확인
+    if (!formData.categoryId) {
+      alert("카테고리를 완전히 선택해주세요.");
+      return;
+    }
+
     onNext();
   };
 
@@ -138,9 +161,10 @@ export default function BasicInfoForm({ onNext }) {
           >
             <MenuItem value="">소분류</MenuItem>
             {formData.middleCategory &&
-              CATEGORIES[formData.category]?.middle[
-                formData.middleCategory
-              ]?.map((sub) => (
+              CATEGORIES[formData.category]?.middle[formData.middleCategory] &&
+              Object.keys(
+                CATEGORIES[formData.category].middle[formData.middleCategory]
+              ).map((sub) => (
                 <MenuItem key={sub} value={sub}>
                   {sub}
                 </MenuItem>
