@@ -51,7 +51,7 @@ VITE_BACKEND_TARGET=local
 VITE_LOCAL_API_URL=http://localhost:8081
 
 # ☁️ 배포된 Render 서버 주소
-VITE_PROD_API_URL=https://mentoss.onrender.com
+VITE_PROD_API_URL=https://mentoss-uc3h.onrender.com 
 ```
 
 배포 환경에서는 `VITE_BACKEND_TARGET=prod`로 고정됩니다:
@@ -59,7 +59,7 @@ VITE_PROD_API_URL=https://mentoss.onrender.com
 ```env
 # .env.production
 VITE_BACKEND_TARGET=prod
-VITE_PROD_API_URL=https://mentoss.onrender.com
+VITE_PROD_API_URL=https://mentoss-uc3h.onrender.com 
 ```
 
 > 💡 로컬에서 개발할 때 **`VITE_BACKEND_TARGET=local`** 또는 \*\*`prod`\*\*로 바꾸면
